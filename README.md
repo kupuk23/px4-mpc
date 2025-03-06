@@ -75,7 +75,7 @@ On another terminal, run
 micro-ros-agent udp4 --port 8888
 ```
 
-Lastly, start PX4-MPc
+Lastly, start PX4-MPC
 ```bash
 ros2 launch px4_mpc mpc_spacecraft_launch.py mode:=wrench namespace:=pop setpoint_from_rviz:=False
 ```
