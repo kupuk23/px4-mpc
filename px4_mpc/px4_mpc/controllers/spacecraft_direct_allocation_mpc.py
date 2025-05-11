@@ -37,8 +37,10 @@ import scipy.linalg
 import casadi as cs
 import time
 
+
 class SpacecraftDirectAllocationMPC():
     def __init__(self, model):
+        self.rot_limit = 10 #np.inf .1
         self.model = model
         self.Tf = 5.0
         self.N = 49
@@ -108,6 +110,12 @@ class SpacecraftDirectAllocationMPC():
         ocp.constraints.idxbu = np.array([0, 1, 2, 3])
         ocp.constraints.x0 = x0
 
+        # set bounds for angular velocity
+
+        # ocp.constraints.idxbx = np.array([10, 11, 12])      # ωx, ωy, ωz
+        # ocp.constraints.lbx   = np.array([-self.rot_limit, -self.rot_limit, -self.rot_limit])
+        # ocp.constraints.ubx   = np.array([+self.rot_limit, +self.rot_limit, +self.rot_limit])
+        
         # set options
         ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
         # PARTIAL_CONDENSING_HPIPM, FULL_CONDENSING_QPOASES, FULL_CONDENSING_HPIPM,

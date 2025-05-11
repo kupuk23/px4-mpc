@@ -31,6 +31,7 @@ setup(
                 'test_setpoints = px4_mpc.test.test_setpoints:main',
                 'rviz_pos_marker = px4_mpc.rviz_pos_marker:main',
                 'test_pose_camera = px4_mpc.test.test_pose_camera:main',
+                'test_missalignment = px4_mpc.test.test_missalignment:main',
         ],
     },
 )

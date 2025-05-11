@@ -129,13 +129,17 @@ class SpacecraftMPC(Node):
             self.model = SpacecraftDirectAllocationModel()
             self.mpc = SpacecraftDirectAllocationMPC(self.model)
 
-        self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
+        self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0])
         self.vehicle_local_position = np.array([0.0, 0.0, 0.0])
         self.vehicle_angular_velocity = np.array([0.0, 0.0, 0.0])
         self.vehicle_angular_velocity = np.array([0.0, 0.0, 0.0])
         self.vehicle_local_velocity = np.array([0.0, 0.0, 0.0])
-        self.setpoint_position = np.array([1.0, 0.0, 0.0])
-        self.setpoint_attitude = np.array([1.0, 0.0, 0.0, 0.0])
+        # self.setpoint_position = np.array([0.0, 0.0, 0.0])
+        # self.setpoint_attitude = np.array([1.0, 0.0, 0.0, 0.0])
+
+        # first setpoint #
+        self.setpoint_position = np.array([0.0, 0.0, 0.0]) # inverted z and y axis
+        self.setpoint_attitude = np.array([1.0, 0.0, 0.0, 0.0]) # invered z and y axis
 
     def set_publishers_subscribers(self, qos_profile_pub, qos_profile_sub):
         self.status_sub = self.create_subscription(
@@ -424,6 +428,11 @@ class SpacecraftMPC(Node):
 
         # Solve MPC
         u_pred, x_pred = self.mpc.solve(x0, ref=ref)
+        # print error from x_pred with setpoint
+        # lin_err = np.linalg.norm(self.vehicle_local_position - self.setpoint_position)
+        # self.get_logger().info(f'Linear Error: {lin_err:.3f}')
+        # ang_err = np.linalg.norm(self.vehicle_attitude - self.setpoint_attitude)
+        # self.get_logger().info(f'Angular Error: {ang_err:.3f}')
 
         # Colect data
         idx = 0
@@ -436,6 +445,7 @@ class SpacecraftMPC(Node):
             predicted_path_msg.poses.append(predicted_pose_msg)
         self.predicted_path_pub.publish(predicted_path_msg)
         self.publish_reference(self.reference_pub, self.setpoint_position)
+
 
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             if self.mode == 'rate':
@@ -453,6 +463,7 @@ class SpacecraftMPC(Node):
         self.setpoint_attitude[1] = request.pose.orientation.x
         self.setpoint_attitude[2] = request.pose.orientation.y
         self.setpoint_attitude[3] = request.pose.orientation.z
+        print("Setpoint from RVIZ: ", self.setpoint_position, self.setpoint_attitude)
         return response
 
     def get_setpoint_pose_callback(self, msg):

@@ -10,6 +10,9 @@ Panels:
         - /Path2
         - /InteractiveMarkers1
         - /Marker1/Topic1
+        - /PointCloud21
+        - /PointCloud21/Status1
+        - /TF1
         - /TF1/Frames1
         - /Pose3
       Splitter Ratio: 0.5
@@ -129,15 +132,15 @@ Visualization Manager:
       Enabled: true
       Interactive Markers Namespace: /rviz_target_pose_marker
       Name: InteractiveMarkers
-      Show Axes: false
+      Show Axes: true
       Show Descriptions: true
       Show Visual Aids: false
       Value: true
     - Class: rviz_default_plugins/Marker
-      Enabled: false
+      Enabled: true
       Name: Marker
       Namespaces:
-        {}
+        arrow: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -145,7 +148,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /px4_mpc/reference
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -175,7 +178,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /pre_processed_pc
+        Value: /camera/points
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -186,17 +189,15 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
-          Value: true
-        camera_link:
-          Value: true
         map:
           Value: true
         moving_frame:
           Value: false
         odom:
           Value: true
-      Marker Scale: 1
+        robot_base_imu:
+          Value: true
+      Marker Scale: 3
       Name: TF
       Show Arrows: true
       Show Axes: true
@@ -205,10 +206,9 @@ Visualization Manager:
         map:
           moving_frame:
             {}
-          odom:
-            base_link:
-              camera_link:
-                {}
+          robot_base_imu:
+            odom:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -297,25 +297,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.6318366527557373
+      Distance: 8.439574241638184
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.5747451782226562
-        Y: 0.2626743018627167
-        Z: 0.7235756516456604
+        X: 0.3405883312225342
+        Y: 0.42548486590385437
+        Z: 1.1366350650787354
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.18039770424365997
+      Pitch: 1.1203972101211548
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.477267265319824
+      Yaw: 2.772247314453125
     Saved: ~
 Window Geometry:
   Displays:
@@ -331,5 +331,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1602
-  X: 2184
-  Y: 98
+  X: 318
+  Y: 83

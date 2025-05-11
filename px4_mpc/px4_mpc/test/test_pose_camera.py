@@ -8,11 +8,15 @@ import px4_mpc.utils.ros_utils as ros_utils
 from tf2_geometry_msgs import do_transform_pose
 import tf2_py
 import tf_transformations as tft
+import numpy as np
 
 
-class PoseForwarder(Node):
+class VisualServo(Node):
     def __init__(self):
-        super().__init__("pose_forwarder")
+        super().__init__("visual_servo")
+
+        self.namespace = self.declare_parameter('namespace', '').value
+        self.namespace_prefix = f'/{self.namespace}' if self.namespace else ''
 
         # Create a subscription to the pose topic
         self.object_pose_sub = self.create_subscription(
@@ -21,12 +25,14 @@ class PoseForwarder(Node):
 
         self.goal_pose_pub = self.create_publisher(PoseStamped, "/goal_pose", 10)
 
+
+        self.goal_pose_pub = self.create_publisher(PoseStamped, f'{self.namespace_prefix}/px4_mpc/setpoint_pose', 10)
         # Create a client for the set_pose service
         self.client = self.create_client(SetPose, "/set_pose")
 
         # Wait for service to become available
-        # while not self.client.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info('Service /set_pose not available, waiting...')
+        while not self.client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("Service /set_pose not available, waiting...")
 
         # Add pose history buffer for consistency checking
         self.pose_history = []
@@ -49,6 +55,36 @@ class PoseForwarder(Node):
         self.get_logger().info(
             "Pose forwarder initialized. Use run_docking service to enable/disable."
         )
+
+        # spawn pose #1
+        self.init_pos = np.array(
+            [-0.01404785, 1.36248684, 0.0]
+        )  # inverted z and y axis
+        self.init_att = np.array(
+            [8.92433882e-01, -5.40154197e-08, 4.97020096e-08, -4.51177984e-01]
+        )  # invered z and y axis
+
+        self.move_robot(self.init_pos, self.init_att)
+
+    def move_robot(self, position, orientation):
+        init_poseStamped = PoseStamped()
+        init_poseStamped.header.frame_id = "map"
+        init_poseStamped.header.stamp = self.get_clock().now().to_msg()
+        init_poseStamped.pose.position.x = position[0]
+        init_poseStamped.pose.position.y = position[1]
+        init_poseStamped.pose.position.z = position[2]
+        init_poseStamped.pose.orientation.w = orientation[0]
+        init_poseStamped.pose.orientation.x = orientation[1]
+        init_poseStamped.pose.orientation.y = orientation[2]
+        init_poseStamped.pose.orientation.z = orientation[3]
+
+        self.goal_pose_pub.publish(init_poseStamped)
+        request = SetPose.Request()
+        request.pose = init_poseStamped.pose
+
+        # Send the request asynchronously
+        future = self.client.call_async(request)
+        future.add_done_callback(self.service_callback)
 
     def run_docking_callback(self, request, response):
         """Service callback to enable/disable pose forwarding"""
@@ -144,12 +180,11 @@ class PoseForwarder(Node):
             # transformed_pose_stamped.pose.orientation.z = q[2]
             # transformed_pose_stamped.pose.orientation.w = q[3]
 
-
             try:
                 if not self.tf_buffer.can_transform(
                     msg.header.frame_id, "map", rclpy.time.Time()
                 ):
-                    
+
                     transformed_pose_stamped = None
                 else:
                     transform = self.tf_buffer.lookup_transform(
@@ -172,8 +207,8 @@ class PoseForwarder(Node):
                 request.pose = transformed_pose_stamped.pose
 
                 # Send the request asynchronously
-                # future = self.client.call_async(request)
-                # future.add_done_callback(self.service_callback)
+                future = self.client.call_async(request)
+                future.add_done_callback(self.service_callback)
             else:
                 self.get_logger().error("Failed to transform pose, not sending request")
         elif not self.run_docking:
@@ -209,14 +244,14 @@ class PoseForwarder(Node):
     def service_callback(self, future):
         try:
             response = future.result()
-            self.get_logger().info("Service call succeeded")
+            self.get_logger().info(f"Service call succeeded. Response: {response}")
         except Exception as e:
             self.get_logger().error(f"Service call failed: {e}")
 
 
 def main():
     rclpy.init()
-    node = PoseForwarder()
+    node = VisualServo()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

@@ -64,6 +64,12 @@ def generate_launch_description():
         description='Publish setpoint pose via rviz'
     )
 
+    use_sim_time_arg = DeclareLaunchArgument(
+        "use_sim_time",
+        default_value="true",
+        description="Use simulation time.",
+    )
+
     mode = LaunchConfiguration('mode')
     namespace = LaunchConfiguration('namespace')
     setpoint_from_rviz = LaunchConfiguration('setpoint_from_rviz')
@@ -72,6 +78,7 @@ def generate_launch_description():
         mode_arg,
         namespace_arg,
         setpoint_from_rviz_arg,
+        use_sim_time_arg,
         Node(
             package='px4_mpc',
             namespace=namespace,
@@ -82,7 +89,8 @@ def generate_launch_description():
             parameters=[
                 {'mode': mode},
                 {'namespace': namespace},
-                {'setpoint_from_rviz': setpoint_from_rviz}
+                {'setpoint_from_rviz': setpoint_from_rviz},
+                {'use_sim_time': LaunchConfiguration("use_sim_time")},
             ]
         ),
         Node(
@@ -93,7 +101,8 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
             parameters=[
-                {'namespace': namespace}
+                {'namespace': namespace},
+                {'use_sim_time': LaunchConfiguration("use_sim_time")},
             ],
             condition=IfCondition(LaunchConfiguration('setpoint_from_rviz'))
         ),
@@ -105,17 +114,20 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
             parameters=[
-                {'namespace': namespace}
+                {'namespace': namespace},
+                {'use_sim_time': LaunchConfiguration("use_sim_time")},
             ],
             condition=UnlessCondition(LaunchConfiguration('setpoint_from_rviz'))
         ),
+        
         Node(
             package='px4_offboard',
             namespace=namespace,
             executable='visualizer',
             name='visualizer',
             parameters=[
-                {'namespace': namespace}
+                {'namespace': namespace},
+                {'use_sim_time': LaunchConfiguration("use_sim_time")},
             ],
             condition=IfCondition(LaunchConfiguration('setpoint_from_rviz'))
         ),
@@ -124,6 +136,9 @@ def generate_launch_description():
             namespace='',
             executable='rviz2',
             name='rviz2',
+            parameters=[
+                {'use_sim_time': LaunchConfiguration("use_sim_time")},
+            ],
             arguments=['-d', os.path.join(get_package_share_directory('px4_mpc'), 'config.rviz')],
             condition=IfCondition(LaunchConfiguration('setpoint_from_rviz'))
         ),
