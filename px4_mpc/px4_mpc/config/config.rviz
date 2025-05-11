@@ -11,7 +11,6 @@ Panels:
         - /InteractiveMarkers1
         - /Marker1/Topic1
         - /PointCloud21
-        - /PointCloud21/Status1
         - /TF1
         - /TF1/Frames1
         - /Pose3
@@ -129,13 +128,13 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/InteractiveMarkers
       Enable Transparency: true
-      Enabled: true
+      Enabled: false
       Interactive Markers Namespace: /rviz_target_pose_marker
       Name: InteractiveMarkers
       Show Axes: true
       Show Descriptions: true
       Show Visual Aids: false
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: Marker
@@ -189,12 +188,16 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        camera_link:
+          Value: true
+        docking_st_goicp:
+          Value: false
+        docking_st_icp:
+          Value: false
         map:
           Value: true
         moving_frame:
           Value: false
-        odom:
-          Value: true
         robot_base_imu:
           Value: true
       Marker Scale: 3
@@ -207,8 +210,11 @@ Visualization Manager:
           moving_frame:
             {}
           robot_base_imu:
-            odom:
-              {}
+            camera_link:
+              docking_st_goicp:
+                {}
+              docking_st_icp:
+                {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -297,7 +303,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8.439574241638184
+      Distance: 2.947627067565918
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -312,10 +318,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1203972101211548
+      Pitch: 0.6003974080085754
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.772247314453125
+      Yaw: 2.2922468185424805
     Saved: ~
 Window Geometry:
   Displays:

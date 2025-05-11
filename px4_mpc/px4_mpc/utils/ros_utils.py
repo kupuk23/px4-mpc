@@ -6,6 +6,24 @@ from tf2_geometry_msgs import do_transform_pose
 import rclpy
 import tf_transformations as tft
 
+def lookup_transform(tf_buffer, target_frame, source_frame):
+    
+    try:
+        if not tf_buffer.can_transform(
+                        target_frame, source_frame, rclpy.time.Time()
+                    ):
+            transformed_pose_stamped = None
+        else:
+            transform = tf_buffer.lookup_transform(
+                target_frame,  # target frame
+                source_frame,  # source frame
+                rclpy.time.Time(),  # get the latest transform
+                rclpy.duration.Duration(seconds=1.0),  # timeout
+            )
+            return transform
+    except Exception as e:
+        print(f"Transform error: {e}")
+        return None
 
 def pose_to_matrix(pose):
     """Convert geometry_msgs/Pose to 4×4 homogeneous matrix."""

@@ -27,12 +27,12 @@ def q_to_rot_mat(q):
 
 def misalignment_angle(p_robot_I, q_robot, p_obj_I):
     """
-    Returns camera–object angle θ  [rad].
+    Returns camera–object angle θ  [deg].
     Camera optical axis = +x_B  = [1,0,0] in body frame.
     """
     deg = 180 / np.pi
     c_B = np.array([1.0, 0.0, 0.0])  # camera axis in body
-    
+
     # 2D CASE #
     p_obj_I[2] = 0.0  # set z to 0 since we are in 2D
     p_robot_I[2] = 0.0  # set z to 0 since we are in 2D
