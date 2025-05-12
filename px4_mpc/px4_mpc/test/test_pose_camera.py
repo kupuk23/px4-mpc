@@ -56,13 +56,19 @@ class VisualServo(Node):
             "Pose forwarder initialized. Use run_docking service to enable/disable."
         )
 
-        # spawn pose #1
-        self.init_pos = np.array(
-            [-0.01404785, 1.36248684, 0.0]
-        )  # inverted z and y axis
-        self.init_att = np.array(
-            [8.92433882e-01, -5.40154197e-08, 4.97020096e-08, -4.51177984e-01]
-        )  # invered z and y axis
+        # # spawn pose #1
+        # self.init_pos = np.array(
+        #     [-0.01404785, 1.36248684, 0.0]
+        # )  # inverted z and y axis
+        # self.init_att = np.array(
+        #     [8.92433882e-01, -5.40154197e-08, 4.97020096e-08, -4.51177984e-01]
+        # )  # invered z and y axis
+
+        # Spawn Pose #2
+        self.init_pos = np.array([ 0.10324634, -1.0295148,  0 ] )
+        self.init_att = np.array([9.52709079e-01, 2.49832297e-08, 2.80198997e-09, 3.03883404e-01]
+)
+
 
         self.move_robot(self.init_pos, self.init_att)
 

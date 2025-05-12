@@ -11,6 +11,7 @@ from rclpy.qos import (
 from geometry_msgs.msg import PoseStamped
 from tf2_ros import Buffer, TransformListener
 from tf2_geometry_msgs import do_transform_pose
+from px4_mpc.utils import ros_utils
 
 
 def q_to_rot_mat(q):
@@ -138,7 +139,13 @@ class MissAlignmentTest(Node):
         # get only the position of the object, convert into map frame
         # set z to 0 since we are in 2D
         msg.pose.position.z = 0.0
-        obj_pose_map = self.transform_pose(msg)
+        transform_cam_map = ros_utils.lookup_transform(
+            self.tf_buffer, "map", msg.header.frame_id
+            )  # transform from camera frame to map frame
+        if transform_cam_map is None:
+            self.get_logger().error("Failed to transform object pose")
+            return
+        obj_pose_map = do_transform_pose(msg.pose, transform_cam_map)
         if obj_pose_map is None:
             self.get_logger().error("Failed to transform object pose")
             return
@@ -161,34 +168,6 @@ class MissAlignmentTest(Node):
         # self.vehicle_local_velocity[0] = msg.vx
         # self.vehicle_local_velocity[1] = -msg.vy
         # self.vehicle_local_velocity[2] = -msg.vz
-
-    def transform_pose(self, pose_stamped):
-        """
-        Transform pose from camera frame to map frame and apply offset + rotation.
-        """
-        try:
-            if not self.tf_buffer.can_transform(
-                pose_stamped.header.frame_id, "map", rclpy.time.Time()
-            ):
-                return None
-            else:
-                # First translate the pose_stamped by x axis in camera frame
-                # First transform the pose from camera_link to map frame
-                transform = self.tf_buffer.lookup_transform(
-                    "map",  # target frame
-                    pose_stamped.header.frame_id,  # source frame
-                    rclpy.time.Time(),  # get the latest transform
-                    rclpy.duration.Duration(seconds=1.0),  # timeout
-                )
-
-                # Apply the transform to get pose in map frame
-                obj_map = do_transform_pose(pose_stamped.pose, transform)
-
-                return obj_map
-
-        except Exception as e:
-            self.get_logger().error(f"Transform error: {e}")
-            return None
 
 
 def main(args=None):

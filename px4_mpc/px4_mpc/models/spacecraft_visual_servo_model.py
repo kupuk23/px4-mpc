@@ -35,9 +35,9 @@ from acados_template import AcadosModel
 import casadi as cs
 import numpy as np
 
-class SpacecraftVisualServo():
+class SpacecraftVisualServoModel():
     def __init__(self):
-        self.name = 'spacecraft_visual_servo'
+        self.name = 'spacecraft_visual_servo_model'
 
         # constants
         self.mass = 16.8
@@ -45,6 +45,8 @@ class SpacecraftVisualServo():
         self.max_thrust = 1.5
         self.max_rate = 0.5
         self.torque_arm_length = 0.12
+
+        self.theta_max_deg = 20
 
     def get_acados_model(self) -> AcadosModel:
         def skew_symmetric(v):
@@ -70,13 +72,27 @@ class SpacecraftVisualServo():
 
         model = AcadosModel()
 
+
+        
         # set up states & controls
         p      = cs.MX.sym('p', 3)
         v      = cs.MX.sym('v', 3)
         q      = cs.MX.sym('q', 4)
         w      = cs.MX.sym('w', 3)
+        p_obj = cs.MX.sym('p_obj', 3)  # Object position in inertial frame
 
         x = cs.vertcat(p, v, q, w)
+
+        # compute bearing inequality
+
+        r_I = p_obj - p  # Vector from robot to object in inertial frame
+        # Transform to body frame using the rotation matrix
+        r_B = cs.mtimes(cs.transpose(q_to_rot_mat(q)), r_I)
+        # Compute vector norm
+        r_B_norm = cs.sqrt(r_B[0]**2 + r_B[1]**2 + r_B[2]**2)  # More explicit form
+        cos_theta_max = cs.cos(np.deg2rad(self.theta_max_deg))
+        g_x = cos_theta_max * r_B_norm - r_B[0]
+        
 
         u = cs.MX.sym('u', 4)
         D_mat = cs.MX.zeros(2, 4)
@@ -125,4 +141,11 @@ class SpacecraftVisualServo():
         model.u = u
         model.name = self.name
 
+        # Add model parameters
+        model.p = p_obj  # Use object position as parameter
+
+         # Define nonlinear constraint
+        model.con_h_expr = g_x
+        model.con_h_expr_e = g_x
+        
         return model
