@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
+from vs_msgs.srv import SetServoPose
 from mpc_msgs.srv import SetPose
 from std_srvs.srv import SetBool
 from tf2_ros import Buffer, TransformListener, TransformBroadcaster
@@ -29,6 +30,9 @@ class VisualServo(Node):
         self.goal_pose_pub = self.create_publisher(PoseStamped, f'{self.namespace_prefix}/px4_mpc/setpoint_pose', 10)
         # Create a client for the set_pose service
         self.client = self.create_client(SetPose, "/set_pose")
+        self.client_vs = self.create_client(
+            SetServoPose, f"{self.namespace_prefix}set_servo_pose"
+        )
 
         # Wait for service to become available
         while not self.client.wait_for_service(timeout_sec=1.0):

@@ -7,7 +7,7 @@
   <maintainer email="jalim@ethz.ch">Jaeyoung Lim</maintainer>
   <maintainer email="padr@kth.se">Pedro Roque</maintainer>
   <license>BSD-3</license>
-
+  <depend>vs_msgs</depend>
   <depend>px4_msgs</depend>
   <depend>mpc_msgs</depend>
   <depend>px4_offboard</depend>

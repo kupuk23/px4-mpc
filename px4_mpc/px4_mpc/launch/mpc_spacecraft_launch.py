@@ -82,8 +82,8 @@ def generate_launch_description():
         Node(
             package='px4_mpc',
             namespace=namespace,
-            executable='mpvs_spacecraft',
-            name='mpvs_spacecraft',
+            executable='mpc_spacecraft',
+            name='mpc_spacecraft',
             output='screen',
             emulate_tty=True,
             parameters=[

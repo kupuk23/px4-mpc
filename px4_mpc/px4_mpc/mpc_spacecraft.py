@@ -79,7 +79,7 @@ class SpacecraftMPC(Node):
         super().__init__('spacecraft_mpc')
 
         # Get mode; rate, wrench, direct_allocation
-        self.mode = self.declare_parameter('mode', 'wrench').value
+        self.mode = self.declare_parameter('mode', 'direct_allocation').value
         self.sitl = True
 
         # Get namespace
@@ -129,7 +129,7 @@ class SpacecraftMPC(Node):
             self.model = SpacecraftDirectAllocationModel()
             self.mpc = SpacecraftDirectAllocationMPC(self.model)
 
-        self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0])
+        self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
         self.vehicle_local_position = np.array([0.0, 0.0, 0.0])
         self.vehicle_angular_velocity = np.array([0.0, 0.0, 0.0])
         self.vehicle_angular_velocity = np.array([0.0, 0.0, 0.0])
@@ -138,7 +138,7 @@ class SpacecraftMPC(Node):
         # self.setpoint_attitude = np.array([1.0, 0.0, 0.0, 0.0])
 
         # first setpoint #
-        self.setpoint_position = np.array([0.0, 0.0, 0.0]) # inverted z and y axis
+        self.setpoint_position = np.array([1.5, 0.0, 0.0]) # inverted z and y axis
         self.setpoint_attitude = np.array([1.0, 0.0, 0.0, 0.0]) # invered z and y axis
 
     def set_publishers_subscribers(self, qos_profile_pub, qos_profile_sub):
@@ -215,23 +215,23 @@ class SpacecraftMPC(Node):
         return
 
     def vehicle_attitude_callback(self, msg):
-        # TODO: handle NED->ENU transformation
-        self.vehicle_attitude[0] = msg.q[0]
-        self.vehicle_attitude[1] = msg.q[1]
-        self.vehicle_attitude[2] = -msg.q[2]
-        self.vehicle_attitude[3] = -msg.q[3]
+        # NED-> ENU transformation
+        # Receives quaternion in NED frame as (qw, qx, qy, qz)
+        q_enu = 1/np.sqrt(2) * np.array([msg.q[0] + msg.q[3], msg.q[1] + msg.q[2], msg.q[1] - msg.q[2], msg.q[0] - msg.q[3]])
+        q_enu /= np.linalg.norm(q_enu)
+        self.vehicle_attitude = q_enu.astype(float)
 
     def vehicle_local_position_callback(self, msg):
-        # TODO: handle NED->ENU transformation
-        self.vehicle_local_position[0] = msg.x
-        self.vehicle_local_position[1] = -msg.y
+        # NED-> ENU transformation
+        self.vehicle_local_position[0] = msg.y
+        self.vehicle_local_position[1] = msg.x
         self.vehicle_local_position[2] = -msg.z
-        self.vehicle_local_velocity[0] = msg.vx
-        self.vehicle_local_velocity[1] = -msg.vy
+        self.vehicle_local_velocity[0] = msg.vy
+        self.vehicle_local_velocity[1] = msg.vx
         self.vehicle_local_velocity[2] = -msg.vz
 
     def vehicle_angular_velocity_callback(self, msg):
-        # TODO: handle NED->ENU transformation
+        # NED-> ENU transformation
         self.vehicle_angular_velocity[0] = msg.xyz[0]
         self.vehicle_angular_velocity[1] = -msg.xyz[1]
         self.vehicle_angular_velocity[2] = -msg.xyz[2]

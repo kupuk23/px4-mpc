@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Pose1
         - /Path2
         - /InteractiveMarkers1
         - /Marker1/Topic1
@@ -55,7 +54,7 @@ Visualization Manager:
       Axes Radius: 0.029999999329447746
       Class: rviz_default_plugins/Pose
       Color: 255; 25; 0
-      Enabled: true
+      Enabled: false
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: Pose
@@ -68,8 +67,8 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /px4_visualizer/vehicle_pose
-      Value: true
+        Value: /pop/px4_visualizer/vehicle_pose
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -139,7 +138,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        arrow: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -188,8 +187,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        camera_link:
-          Value: true
         map:
           Value: true
         moving_frame:
@@ -206,8 +203,7 @@ Visualization Manager:
           moving_frame:
             {}
           robot_base_imu:
-            camera_link:
-              {}
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1

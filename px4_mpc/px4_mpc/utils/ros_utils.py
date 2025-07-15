@@ -12,7 +12,7 @@ def lookup_transform(tf_buffer, target_frame, source_frame):
         if not tf_buffer.can_transform(
                         target_frame, source_frame, rclpy.time.Time()
                     ):
-            transformed_pose_stamped = None
+            return None
         else:
             transform = tf_buffer.lookup_transform(
                 target_frame,  # target frame

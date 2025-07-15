@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (C) 2022 PX4 Development Team. All rights reserved.
+#   Copyright (C) 2024 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,76 +33,117 @@
 
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver
 import numpy as np
-import scipy.linalg
 import casadi as cs
+import os
 
-class MultirotorRateMPC():
+class SpacecraftDirectAllocationMPC():
     def __init__(self, model):
         self.model = model
-        self.Tf = 1.0
-        self.N = 50
+        self.Tf = 5.0
+        self.N = 49
 
-        self.x0 = np.array([0.01, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        self.x0 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
-        self.ocp_solver, self.integrator = self.setup(self.x0, self.N , self.Tf)
+        self.ocp_solver, self.integrator = self.setup(self.x0, self.N, self.Tf)
 
     def setup(self, x0, N_horizon, Tf):
         # create ocp object to formulate the OCP
         ocp = AcadosOcp()
 
+        # Set directory for code generation and json file
+        this_file_dir = os.path.dirname(os.path.abspath(__file__))
+        package_root = os.path.abspath(os.path.join(this_file_dir, '..'))
+        codegen_dir = os.path.join(package_root, 'mpc_codegen')
+        json_path = os.path.join(codegen_dir, 'acados_ocp.json')
+        os.makedirs(codegen_dir, exist_ok=True)
+        ocp.code_export_directory = codegen_dir
+
         # set model
         model = self.model.get_acados_model()
         Fmax = self.model.max_thrust
-        wmax = self.model.max_rate
 
         ocp.model = model
 
         nx = model.x.size()[0]
         nu = model.u.size()[0]
-        ny = nx + nu
-        ny_e = nx
+        print(f"nx: {nx}, nu: {nu}")
 
         # set dimensions
         ocp.dims.N = N_horizon
+        ocp.solver_options.N_horizon = N_horizon
 
         # set cost
-        Q_mat = 2*np.diag([1e1, 1e1, 1e1, 1e1, 1e1, 1e1, 0.0, 0.1, 0.1, 0.1])
-        Q_e = 2*np.diag([3e2, 3e2, 3e2, 1e2, 1e2, 1e2, 0.0, 0.0, 0.0, 0.0])
-        R_mat = 2*np.diag([1e1, 5e2, 5e2, 5e2])
+        Q_mat = [5e1, 5e1, 5e1,
+                 1e1, 1e1, 1e1,
+                 8e3,
+                 1e1, 1e1, 1e1]
+        R_mat = [1e1] * 4
 
-        # TODO: How do you add terminal costs?
+        ocp.cost.W_0 = np.diag(Q_mat + R_mat)
+        ocp.cost.W = np.diag(Q_mat + R_mat)
+        ocp.cost.W_e = 20 * np.diag(Q_mat)
 
-        # the 'EXTERNAL' cost type can be used to define general cost terms
-        # NOTE: This leads to additional (exact) hessian contributions when using GAUSS_NEWTON hessian.
-        # ocp.cost.cost_type = 'EXTERNAL'
-        # ocp.cost.cost_type_e = 'EXTERNAL'
-        # ocp.model.cost_expr_ext_cost = model.x.T @ Q_mat @ model.x + model.u.T @ R_mat @ model.u
-        # ocp.model.cost_expr_ext_cost_e = model.x.T @ Q_e @ model.x
+        # References:
+        x_ref = cs.MX.sym('x_ref', (13, 1))
+        u_ref = cs.MX.sym('u_ref', (4, 1))
 
+        # Calculate errors
+        # x : p,v,q,w               , R9 x SO(3)
+        # u : Fx,Fy,Fz,Mx,My,Mz     , R6
+        x = ocp.model.x
+        u = ocp.model.u
+
+        x_error = x[0:3] - x_ref[0:3]
+        x_error = cs.vertcat(x_error, x[3:6] - x_ref[3:6])
+        x_error = cs.vertcat(x_error, 1 - (x[6:10].T @ x_ref[6:10])**2)
+        x_error = cs.vertcat(x_error, x[10:13] - x_ref[10:13])
+        u_error = u - u_ref
+
+        ocp.model.p = cs.vertcat(x_ref, u_ref)
+
+        # define cost with parametric reference
         ocp.cost.cost_type = 'NONLINEAR_LS'
         ocp.cost.cost_type_e = 'NONLINEAR_LS'
-        ocp.cost.W = scipy.linalg.block_diag(Q_mat, R_mat)
-        ocp.cost.W_e = scipy.linalg.block_diag(Q_e)
+        ocp.cost.cost_type_0 = 'NONLINEAR_LS'
 
+        ocp.model.cost_y_expr_0 = cs.vertcat(x_error, u_error)
+        ocp.model.cost_y_expr = cs.vertcat(x_error, u_error)
+        ocp.model.cost_y_expr = cs.vertcat(x_error, u_error)
+        ocp.model.cost_y_expr_e = x_error
 
-        ocp.model.cost_y_expr = cs.vertcat(model.x, model.u)
-        ocp.model.cost_y_expr_e = model.x
-        ocp.cost.yref  = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        ocp.cost.yref_e = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        ocp.cost.yref_0 = np.array([0.0] * (nx - 3 + nu))
+        ocp.cost.yref = np.array([0.0] * (nx - 3 + nu))
+        ocp.cost.yref_e = np.array([0.0] * (nx - 3))
 
-        # set constraints
-        ocp.constraints.lbu = np.array([0.0, -wmax, -wmax, -0.5*wmax])
-        ocp.constraints.ubu = np.array([+Fmax,  wmax, wmax, 0.5*wmax])
+        # Initialize parameters
+        p_0 = np.concatenate((x0, np.zeros(nu)))  # First step is error 0 since x_ref = x0
+        ocp.parameter_values = p_0
+
+        # set constraints on U
+        ocp.constraints.lbu = np.array([-Fmax, -Fmax, -Fmax, -Fmax])
+        ocp.constraints.ubu = np.array([+Fmax, +Fmax, +Fmax, +Fmax])
         ocp.constraints.idxbu = np.array([0, 1, 2, 3])
 
+        # set constraints on X
+        ocp.constraints.lbx = np.array([-5, -5, -5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1])
+        ocp.constraints.ubx = np.array([+5, +5, +5, +1, +1, +1, +1, +1, +1, +1, +1, +1, +1])
+        ocp.constraints.idxbx = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
+        # set constraints on X at the end of the horizon
+        ocp.constraints.lbx_e = np.array([-5, -5, -5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1])
+        ocp.constraints.ubx_e = np.array([+5, +5, +5, +1, +1, +1, +1, +1, +1, +1, +1, +1, +1])
+        ocp.constraints.idxbx_e = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
+        # set initial state
         ocp.constraints.x0 = x0
 
         # set options
-        ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM' # FULL_CONDENSING_QPOASES
+        ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
         # PARTIAL_CONDENSING_HPIPM, FULL_CONDENSING_QPOASES, FULL_CONDENSING_HPIPM,
         # PARTIAL_CONDENSING_QPDUNES, PARTIAL_CONDENSING_OSQP, FULL_CONDENSING_DAQP
         ocp.solver_options.hessian_approx = 'GAUSS_NEWTON' # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = 'ERK'
+
         # ocp.solver_options.print_level = 1
         use_RTI=True
         if use_RTI:
@@ -112,24 +153,41 @@ class MultirotorRateMPC():
         else:
             ocp.solver_options.nlp_solver_type = 'SQP' # SQP_RTI, SQP
 
-        ocp.solver_options.qp_solver_cond_N = N_horizon
+        # ocp.solver_options.qp_solver_cond_N = N_horizon
+        # ocp.solver_options.print_level = 6
 
         # set prediction horizon
         ocp.solver_options.tf = Tf
 
-        ocp_solver = AcadosOcpSolver(ocp, json_file = 'acados_ocp.json')
+        ocp_solver = AcadosOcpSolver(ocp, json_file=json_path)
         # create an integrator with the same settings as used in the OCP solver.
-        acados_integrator = AcadosSimSolver(ocp, json_file = 'acados_ocp.json')
+        acados_integrator = AcadosSimSolver(ocp, json_file=json_path)
 
         return ocp_solver, acados_integrator
-    def solve(self, x0, verbose=False):
+
+    def solve(self, x0, verbose=False, ref=None):
 
         # preparation phase
         ocp_solver = self.ocp_solver
 
+        # Set reference, create zero reference
+        if ref is None:
+            zero_ref = np.zeros(self.model.get_acados_model().x.size()[0] + self.model.get_acados_model().u.size()[0])
+            zero_ref[6] = 1.0
+
+        for i in range(self.N+1):
+            if ref is not None:
+                # Assumed ref structure: (nx+nu) x N+1
+                # NOTE: last u_ref is not used
+                p_i = ref[:, i]
+                ocp_solver.set(i, "p", p_i)
+            else:
+                # set all references to 0
+                ocp_solver.set(i, "p", zero_ref)
+
         # set initial state
-        ocp_solver.set(0, "lbx", x0)
-        ocp_solver.set(0, "ubx", x0)
+        ocp_solver.set(0, "lbx", x0.flatten())
+        ocp_solver.set(0, "ubx", x0.flatten())
 
         status = ocp_solver.solve()
         if verbose:
